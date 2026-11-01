@@ -1,0 +1,16 @@
+{
+  "name": "@nightlab-agent/opencode-subagent-cap",
+  "version": "0.1.0",
+  "description": "opencode plugin: cap how many subagents (task calls) run at once; the rest wait for a free slot, in order.",
+  "type": "module",
+  "main": "index.js",
+  "exports": "./index.js",
+  "keywords": ["opencode", "opencode-plugin", "subagent", "subagents", "parallel", "rate-limit", "concurrency"],
+  "homepage": "https://github.com/nightlab-agent/opencode-subagent-cap#readme",
+  "bugs": "https://github.com/nightlab-agent/opencode-subagent-cap/issues",
+  "repository": { "type": "git", "url": "https://github.com/nightlab-agent/opencode-subagent-cap" },
+  "license": "MIT",
+  "author": "Nightlab",
+  "files": ["index.js", "gate.js", "CHANGELOG.md"],
+  "scripts": { "test": "node --test test/*.test.js" }
+}
