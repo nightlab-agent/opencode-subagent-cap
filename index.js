@@ -8,6 +8,7 @@ const DONE = new Set(["completed", "error"])
 export const SubagentCap = async ({ client }) => {
   const gate = createGate(readMax())
   const parentOf = new Map()
+  const idleCount = new Map() // sessionID -> turns ended, to catch an Esc during the parent lookup
 
   // A failed lookup counts as nested (not queued, not cached): queuing a call that really is
   // nested would deadlock, while letting one top-level call through only misses the cap once.
@@ -28,13 +29,21 @@ export const SubagentCap = async ({ client }) => {
     "tool.execute.before": async (input, output) => {
       if (input.tool !== "task") return
       if (output?.args?.background) return
+      const turn = idleCount.get(input.sessionID)
       if (await isNested(input.sessionID)) return
-      await gate.acquire(input.callID)
+      if (idleCount.get(input.sessionID) !== turn) throw new Error(`subagent-cap: ${input.callID} ended while it waited for a slot`)
+      await gate.acquire(input.callID, input.sessionID)
     },
     "tool.execute.after": async (input) => {
       if (input.tool === "task") gate.release(input.callID)
     },
     event: async ({ event }) => {
+      if (event?.type === "session.idle") {
+        const id = event.properties?.sessionID
+        idleCount.set(id, (idleCount.get(id) ?? 0) + 1)
+        if (idleCount.size > 500) idleCount.delete(idleCount.keys().next().value)
+        return gate.releaseSession(id)
+      }
       if (event?.type !== "message.part.updated") return
       const part = event.properties?.part
       if (part?.type !== "tool" || part.tool !== "task") return

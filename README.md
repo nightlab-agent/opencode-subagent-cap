@@ -65,7 +65,7 @@ test only).
 - It does not support the opencode 2.x line (`@opencode/cli`), where the subagent tool and the plugin
   hooks are different.
 - Subtasks started by a slash command go through the same hooks in the 1.19.5 source, but that
-  path has not been tested.
+  path has not been run in opencode (covered by a unit test only).
 - It does not cap across separate opencode processes: each process has its own count.
 - A waiting `task` call shows as running in the UI until its slot comes; the wait is not shown (per the 1.19.5 source).
 
