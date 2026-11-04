@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Fixes from a second review, each with a test that failed first:
+- A call is now known by session and call id together. Before, a call inside a subagent that shared an id with its parent freed the parent's slot, and two sessions sharing an id could free each other's slot, so one more call ran than the cap.
+- Waiting calls keep the order they were made in when parent lookups answer out of order.
+- A cap such as `1.5`, `3junk` or `1e3` now falls back to 2, as the README says, instead of reading the first digits.
+- A call that ended before it asked for a slot is refused at once, even when every slot is taken.
+- An Esc during a parent lookup is no longer forgotten when many other sessions go idle.
+- An id that ended in a finished turn can be used again in the next turn.
+
 ## 0.1.1 (2026-11-01)
 
 Fixes slots that were kept or freed wrongly:

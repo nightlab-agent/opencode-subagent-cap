@@ -44,10 +44,10 @@ for (const [name, secondID] of [["reused id", "call_0"], ["comparison: distinct 
     const g = createGate(2)
     await g.acquire("call_0", "A")
     await g.acquire(secondID, "B")
-    g.release("call_0")
-    g.release(secondID)
-    g.release("call_0", "completed")
-    g.release(secondID, "completed")
+    g.release("call_0", undefined, "A")
+    g.release(secondID, undefined, "B")
+    g.release("call_0", "completed", "A")
+    g.release(secondID, "completed", "B")
     await assert.doesNotReject(g.acquire("call_0", "C"))
   })
 }
@@ -130,3 +130,42 @@ for (const unrelatedSessions of [500, 0]) {
     assert.match(await result, /ended while it waited/)
   })
 }
+
+for (const turnEnded of [true, false]) {
+  test(`an id that ended in a finished turn can be used again: ${turnEnded ? "after idle" : "comparison: same turn is refused"}`, async () => {
+    const g = createGate(1)
+    g.release("call_0", "error", "S")
+    if (turnEnded) g.releaseSession("S")
+    const outcome = g.acquire("call_0", "S").then(() => "ran", () => "refused")
+    assert.equal(await outcome, turnEnded ? "ran" : "refused")
+  })
+}
+
+for (const [name, ended] of [["reused id", "B"], ["comparison: the other session ends", "A"]]) {
+  test(`two sessions, same id: the end event frees only the session it names: ${name}`, async () => {
+    const h = await plugin(topClient, 2)
+    await before(h, "call_0", "A")
+    await before(h, "call_0", "B")
+    await h.event({ event: { type: "message.part.updated", properties: { part: { id: "prt", sessionID: ended, type: "tool", tool: "task", callID: "call_0", state: { status: "error" } } } } })
+    await before(h, "third", "C")
+    let admitted = false
+    const queued = before(h, "fourth", "D").then(() => (admitted = true))
+    await tick()
+    assert.equal(admitted, false)
+    await idle(h, ended === "A" ? "B" : "A")
+    await queued
+  })
+}
+
+test("a high cap never forgets a running slot", async () => {
+  const g = createGate(600)
+  for (let i = 0; i < 501; i++) await g.acquire(`c${i}`, "S")
+  g.release("c0", undefined, "S")
+  assert.equal(g.stats().running, 500)
+})
+test("a high cap comparison: the last slot taken is given back too", async () => {
+  const g = createGate(600)
+  for (let i = 0; i < 501; i++) await g.acquire(`c${i}`, "S")
+  g.release("c500", undefined, "S")
+  assert.equal(g.stats().running, 500)
+})

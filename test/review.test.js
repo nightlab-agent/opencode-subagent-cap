@@ -7,8 +7,8 @@ process.env.OPENCODE_SUBAGENT_MAX = "1"
 const { SubagentCap } = await import("../index.js")
 const within = (p, ms = 200) =>
   Promise.race([p.then(() => "ran"), new Promise((r) => setTimeout(() => r("still waiting"), ms))])
-const partEvent = (callID, status, id = "prt_x") => ({
-  event: { type: "message.part.updated", properties: { part: { id, type: "tool", tool: "task", callID, state: { status } } } },
+const partEvent = (callID, status, id = "prt_x", sessionID = "S") => ({
+  event: { type: "message.part.updated", properties: { part: { id, sessionID, type: "tool", tool: "task", callID, state: { status } } } },
 })
 const topClient = { session: { get: async () => ({ data: { parentID: undefined } }) } }
 const idle = (h, sessionID = "S") => h.event({ event: { type: "session.idle", properties: { sessionID } } })

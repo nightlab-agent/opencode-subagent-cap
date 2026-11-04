@@ -8,7 +8,7 @@ const DONE = new Set(["completed", "error"])
 export const SubagentCap = async ({ client }) => {
   const gate = createGate(readMax())
   const parentOf = new Map()
-  const idleCount = new Map() // sessionID -> turns ended, to catch an Esc during the parent lookup
+  const lookups = new Set() // calls waiting on a parent lookup, so a turn that ends meanwhile can refuse them
 
   // A failed lookup counts as nested (not queued, not cached): queuing a call that really is
   // nested would deadlock, while letting one top-level call through only misses the cap once.
@@ -29,19 +29,22 @@ export const SubagentCap = async ({ client }) => {
     "tool.execute.before": async (input, output) => {
       if (input.tool !== "task") return
       if (output?.args?.background) return
-      const turn = idleCount.get(input.sessionID)
-      if (await isNested(input.sessionID)) return
-      if (idleCount.get(input.sessionID) !== turn) throw new Error(`subagent-cap: ${input.callID} ended while it waited for a slot`)
-      await gate.acquire(input.callID, input.sessionID)
+      const ticket = gate.ticket()
+      const call = { sessionID: input.sessionID, turnEnded: false }
+      lookups.add(call)
+      const nested = await isNested(input.sessionID)
+      lookups.delete(call)
+      if (nested) return
+      if (call.turnEnded) throw new Error(`subagent-cap: ${input.callID} ended while it waited for a slot`)
+      await gate.acquire(input.callID, input.sessionID, ticket)
     },
     "tool.execute.after": async (input) => {
-      if (input.tool === "task") gate.release(input.callID)
+      if (input.tool === "task") gate.release(input.callID, undefined, input.sessionID)
     },
     event: async ({ event }) => {
       if (event?.type === "session.idle") {
         const id = event.properties?.sessionID
-        idleCount.set(id, (idleCount.get(id) ?? 0) + 1)
-        if (idleCount.size > 500) idleCount.delete(idleCount.keys().next().value)
+        for (const call of lookups) if (call.sessionID === id) call.turnEnded = true
         return gate.releaseSession(id)
       }
       if (event?.type !== "message.part.updated") return
@@ -49,9 +52,9 @@ export const SubagentCap = async ({ client }) => {
       if (part?.type !== "tool" || part.tool !== "task") return
       const status = part.state?.status
       if (!DONE.has(status)) return
-      gate.release(part.callID, status)
+      gate.release(part.callID, status, part.sessionID)
       // a slash-command subtask hands the hooks part.id, not part.callID (session/prompt.ts in 1.19.5)
-      if (part.id && part.id !== part.callID) gate.release(part.id, status)
+      if (part.id && part.id !== part.callID) gate.release(part.id, status, part.sessionID)
     },
   }
 }

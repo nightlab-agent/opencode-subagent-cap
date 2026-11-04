@@ -6,8 +6,8 @@ import { SubagentCap } from "../index.js"
 process.env.OPENCODE_SUBAGENT_MAX = "1"
 const within = (p, ms = 200) =>
   Promise.race([p.then(() => "ran"), new Promise((r) => setTimeout(() => r("still waiting"), ms))])
-const partEvent = (callID, status, id = "prt_x") => ({
-  event: { type: "message.part.updated", properties: { part: { id, type: "tool", tool: "task", callID, state: { status } } } },
+const partEvent = (callID, status, id = "prt_x", sessionID = "S") => ({
+  event: { type: "message.part.updated", properties: { part: { id, sessionID, type: "tool", tool: "task", callID, state: { status } } } },
 })
 const topClient = { session: { get: async () => ({ data: { parentID: undefined } }) } }
 
@@ -62,13 +62,13 @@ test("F3 a reused callID after a normal completion is not refused", async () => 
   const h = await SubagentCap({ client: topClient })
   await h["tool.execute.before"]({ tool: "task", sessionID: "A", callID: "call_0" }, { args: {} })
   await h["tool.execute.after"]({ tool: "task", sessionID: "A", callID: "call_0" }) // tools.ts:120 after hook first
-  await h.event(partEvent("call_0", "completed")) // then the part completes -> goes to `ended`
+  await h.event(partEvent("call_0", "completed", "prt_x", "A")) // then the part completes -> goes to `ended`
   await assert.doesNotReject(h["tool.execute.before"]({ tool: "task", sessionID: "B", callID: "call_0" }, { args: {} }))
 })
 test("F3 comparison: a fresh callID after a normal completion runs", async () => {
   const h = await SubagentCap({ client: topClient })
   await h["tool.execute.before"]({ tool: "task", sessionID: "A", callID: "call_0" }, { args: {} })
   await h["tool.execute.after"]({ tool: "task", sessionID: "A", callID: "call_0" })
-  await h.event(partEvent("call_0", "completed"))
+  await h.event(partEvent("call_0", "completed", "prt_x", "A"))
   await assert.doesNotReject(h["tool.execute.before"]({ tool: "task", sessionID: "B", callID: "call_1" }, { args: {} }))
 })
