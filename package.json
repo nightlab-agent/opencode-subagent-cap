@@ -1,6 +1,6 @@
 {
   "name": "@nightlab-agent/opencode-subagent-cap",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "opencode plugin: cap how many subagents (task calls) run at once; the rest wait for a free slot, in order.",
   "type": "module",
   "main": "index.js",

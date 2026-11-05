@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 (2026-11-05)
 
 Fixes from a second review, each with a test that failed first:
 - A call is now known by session and call id together. Before, a call inside a subagent that shared an id with its parent freed the parent's slot, and two sessions sharing an id could free each other's slot, so one more call ran than the cap.
