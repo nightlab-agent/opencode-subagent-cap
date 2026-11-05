@@ -2,8 +2,8 @@
 
 ## 0.1.2 (2026-11-05)
 
-Fixes from a second review, each with a test that failed first:
-- A call is now known by session and call id together. Before, a call inside a subagent that shared an id with its parent freed the parent's slot, and two sessions sharing an id could free each other's slot, so one more call ran than the cap.
+Fixes, each with a test that failed first:
+- A call is now known by session and call id together. Before, a call inside a subagent that shared an id with its parent freed the parent's slot, and the 0.1.1 fix for two sessions sharing an id missed one case: when the second session finished and then went idle, both slots were freed, so one more call ran than the cap.
 - Calls waiting for a slot keep the order they were made in when parent lookups answer out of order. A call whose lookup is still out can lose a free slot to a later call, so a slow lookup never holds up the others.
 - A cap such as `1.5`, `3junk` or `1e3` now falls back to 2, as the README says, instead of reading the first digits.
 - A call that ended before it asked for a slot is refused at once, even when every slot is taken.

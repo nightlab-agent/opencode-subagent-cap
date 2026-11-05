@@ -33,7 +33,7 @@ OPENCODE_SUBAGENT_MAX=3 opencode
 ## What it does
 
 - A `task` call from your main session waits in the plugin's `tool.execute.before` hook until fewer
-  than N subagents are running, then goes ahead. Waiting calls start in the order they were made.
+  than N subagents are running, then goes ahead. Calls waiting for a slot start in the order they were made (a call still looking up its parent session can be passed once).
 - A slot is given back when the subagent's tool call ends: completed, failed, or stopped. It listens
   for the tool part's end on the event stream as well as the `tool.execute.after` hook, because in
   opencode 1.19.5 the after hook does not run when a tool throws or is aborted.
@@ -57,7 +57,7 @@ several `task` calls at once and answers each subagent slowly, counting how many
 | cap 1, the first subagent's model call fails | 3 | 1 (the failed one freed its slot; the other 2 ran) |
 | cap 1, each subagent starts its own subagent (`subagent_depth: 2`) | 2 + 2 | 1 grandchild at a time (both ran, no deadlock) |
 
-Through `opencode serve` on the same version and the same stand-in model:
+Through `opencode serve` on the same version, with the stand-in model changed in two lines so a second turn asks again:
 
 | setup | subagents asked | what happened |
 |---|---|---|
