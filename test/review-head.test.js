@@ -169,3 +169,25 @@ test("a high cap comparison: the last slot taken is given back too", async () =>
   g.release("c500", undefined, "S")
   assert.equal(g.stats().running, 500)
 })
+
+// The order opencode 1.19.5 really gives on Esc (seen at four timings through the server's abort
+// call): first idle, then an error part for every call, then a second idle.
+for (const [name, turnEnds] of [["Esc", true], ["comparison: the turn goes on", false]]) {
+  test(`waiting calls are refused at the first idle of an abort, nothing runs late: ${name}`, async () => {
+    const h = await plugin()
+    await before(h, "call_0")
+    const waiter = before(h, "call_1").then(() => "ran", () => "refused")
+    await tick()
+    if (turnEnds) await idle(h, "S")
+    const part = (callID) => h.event({ event: { type: "message.part.updated", properties: { part: {
+      id: `prt_${callID}`, sessionID: "S", type: "tool", tool: "task", callID,
+      state: { status: "error", error: "Tool execution aborted" },
+    } } } })
+    await part("call_0")
+    assert.equal(await waiter, turnEnds ? "refused" : "ran")
+    await part("call_1")
+    await idle(h, "S")
+    const next = await Promise.race([before(h, "call_0").then(() => "ran"), tick().then(() => "stuck")])
+    assert.equal(next, "ran", "the next turn starts, and may reuse the id")
+  })
+}

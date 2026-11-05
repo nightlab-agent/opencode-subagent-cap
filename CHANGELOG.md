@@ -10,6 +10,8 @@ Fixes from a second review, each with a test that failed first:
 - An Esc during a parent lookup is no longer forgotten when many other sessions go idle.
 - An id that ended in a finished turn can be used again in the next turn.
 
+The README now says what was run on opencode 1.19.5: an aborted turn and a slash-command subtask.
+
 ## 0.1.1 (2026-11-01)
 
 Fixes slots that were kept or freed wrongly:
